@@ -1,0 +1,124 @@
+# WeeChat container based on Debian
+
+# Supported arguments:
+#    VERSION  WeeChat version (default: "latest" which is latest stable)
+
+# ==== base for all stages ====
+
+FROM debian:sid-slim AS base
+LABEL stage=base
+
+LABEL maintainer="Bruno 'Hyweene' Giarrizzo <bruno@giarrizzo.fr>"
+
+# WeeChat version
+ARG VERSION="latest"
+ENV VERSION="${VERSION}"
+
+ARG HOME="/home/user"
+ENV HOME="${HOME}"
+
+ENV LANG="C.UTF-8"
+ENV TERM="xterm-256color"
+
+# create a user
+RUN set -eux ; \
+    useradd --create-home --home-dir "$HOME" user ; \
+    mkdir -p "$HOME/.weechat" ; \
+    mkdir -p "$HOME/.config/weechat" ; \
+    mkdir -p "$HOME/.local/share/weechat" ; \
+    mkdir -p "$HOME/.cache/weechat" ; \
+    chown -R user:user "$HOME"
+
+# ==== build ====
+
+FROM base AS build
+LABEL stage=build
+
+RUN set -eux ; \
+    \
+    # install download/build dependencies
+    apt-get update ; \
+    apt-get install -y --no-install-recommends \
+        asciidoctor \
+        ca-certificates \
+        cmake \
+        curl \
+        g++ \
+        gcc \
+        gettext \
+        gnupg \
+        libcjson-dev \
+        libcurl3-gnutls-dev \
+        libgcrypt20-dev \
+        libgnutls28-dev \
+        libncurses-dev \
+        libzstd-dev \
+        make \
+        pkg-config \
+        ruby-pygments.rb \
+        xz-utils \
+        zlib1g-dev \
+    ; \
+    # download WeeChat
+    cd /tmp ; \
+    curl -o weechat.tar.xz "https://weechat.org/files/src/weechat-${VERSION}.tar.xz" ; \
+    if [ "$VERSION" != "devel" ] ; then \
+        curl -o weechat.tar.xz.asc "https://weechat.org/files/src/weechat-${VERSION}.tar.xz.asc" ; \
+        export GNUPGHOME="$(mktemp -d)" ; \
+        gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys A9AB5AB778FA5C3522FD0378F82F4B16DEC408F8 ; \
+        gpg --batch --verify /tmp/weechat.tar.xz.asc /tmp/weechat.tar.xz ; \
+        gpgconf --kill all ; \
+    fi ; \
+    \
+    # build WeeChat
+    mkdir -p /tmp/weechat/build ; \
+    tar -xf /tmp/weechat.tar.xz -C /tmp/weechat --strip-components 1 ; \
+    cd /tmp/weechat/build ; \
+    cmake \
+        .. \
+        -DCMAKE_INSTALL_PREFIX=/opt/weechat \
+        -DENABLE_MAN=ON \
+        -DENABLE_SCRIPT=OFF \
+        -DENABLE_SCRIPTS=OFF \
+        -DENABLE_SPELL=OFF \
+        -DENABLE_HEADLESS=ON \
+    ; \
+    make -j $(nproc) ; \
+    make install
+
+# ==== final image ====
+
+FROM base AS final
+LABEL stage=final
+
+RUN set -eux ; \
+    \
+    # install runtime dependencies
+    apt-get update ; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libcjson1 \
+        libcurl3-gnutls \
+        libgcrypt20 \
+        libgnutls30t64 \
+        libncursesw6 \
+        libzstd1 \
+        locales \
+        ncurses-term \
+        tzdata \
+        zlib1g \
+    ; \
+    # cleaning
+    apt-get clean ; \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /opt/weechat /opt/weechat
+
+RUN ln -sf /opt/weechat/bin/weechat /usr/bin/weechat
+RUN ln -sf /opt/weechat/bin/weechat-headless /usr/bin/weechat-headless
+
+WORKDIR $HOME
+
+USER user
+
+CMD ["weechat"]

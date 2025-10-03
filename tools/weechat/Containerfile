@@ -14,6 +14,9 @@ LABEL maintainer="Bruno 'Hyweene' Giarrizzo <bruno@giarrizzo.fr>"
 ARG VERSION="latest"
 ENV VERSION="${VERSION}"
 
+ARG SLIM=""
+ENV SLIM="${SLIM}"
+
 ARG HOME="/home/user"
 ENV HOME="${HOME}"
 
@@ -59,6 +62,23 @@ RUN set -eux ; \
         xz-utils \
         zlib1g-dev \
     ; \
+    if [ -z "$SLIM" ] ; then \
+        apt-get install -y --no-install-recommends \
+            gem2deb \
+            guile-3.0-dev \
+            libargon2-dev \
+            libaspell-dev \
+            liblua5.3-dev \
+            libperl-dev \
+            libphp-embed \
+            libsodium-dev \
+            libxml2-dev \
+            php-dev \
+            python3-dev \
+            tcl-dev \
+        ; \
+    fi ; \
+    \
     # download WeeChat
     cd /tmp ; \
     curl -o weechat.tar.xz "https://weechat.org/files/src/weechat-${VERSION}.tar.xz" ; \
@@ -74,15 +94,24 @@ RUN set -eux ; \
     mkdir -p /tmp/weechat/build ; \
     tar -xf /tmp/weechat.tar.xz -C /tmp/weechat --strip-components 1 ; \
     cd /tmp/weechat/build ; \
-    cmake \
-        .. \
-        -DCMAKE_INSTALL_PREFIX=/opt/weechat \
-        -DENABLE_MAN=ON \
-        -DENABLE_SCRIPT=OFF \
-        -DENABLE_SCRIPTS=OFF \
-        -DENABLE_SPELL=OFF \
-        -DENABLE_HEADLESS=ON \
-    ; \
+    if [ -z "$SLIM" ] ; then \
+        cmake \
+            .. \
+            -DCMAKE_INSTALL_PREFIX=/opt/weechat \
+            -DENABLE_MAN=ON \
+            -DENABLE_HEADLESS=ON \
+        ; \
+    else \
+        cmake \
+            .. \
+            -DCMAKE_INSTALL_PREFIX=/opt/weechat \
+            -DENABLE_MAN=ON \
+            -DENABLE_SCRIPT=OFF \
+            -DENABLE_SCRIPTS=OFF \
+            -DENABLE_SPELL=OFF \
+            -DENABLE_HEADLESS=ON \
+        ; \
+    fi ; \
     make -j $(nproc) ; \
     make install
 
@@ -108,6 +137,19 @@ RUN set -eux ; \
         tzdata \
         zlib1g \
     ; \
+    if [ -z "$SLIM" ] ; then \
+        apt-get install -y --no-install-recommends \
+            aspell-en \
+            guile-3.0-libs \
+            libaspell15 \
+            liblua5.3-0 \
+            libperl5.40 \
+            libphp-embed \
+            libpython3.13 \
+            libruby3.3 \
+            libtcl8.6 \
+        ; \
+    fi ; \
     # cleaning
     apt-get clean ; \
     rm -rf /var/lib/apt/lists/*

@@ -11,5 +11,5 @@ docker build -t hyweene/weechat:latest -f Containerfile .
 ## Run
 
 ```bash
-docker run --rm -v ${HOME}/.config/weechat:/home/user/.config/weechat hyweene/weechat:latest
+docker run -it --rm -v ${HOME}/.config/weechat:/home/user/.config/weechat hyweene/weechat:latest
 ```

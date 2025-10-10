@@ -1,0 +1,35 @@
+# ==== base image ====
+
+FROM alpine:latest
+
+LABEL maintainer="Bruno 'Hyweene' Giarrizzo <bruno@giarrizzo.fr>"
+
+ARG HOME="/home/user"
+ENV HOME="${HOME}"
+
+# create a user
+RUN set -eux ; \
+    adduser -D -h "$HOME" user ; \
+    mkdir -p "$HOME/.mutt" ; \
+    mkdir -p "$HOME/.config/mutt" ; \
+    mkdir -p "$HOME/.local/share/mutt" ; \
+    mkdir -p "$HOME/.local/state/mutt" ; \
+    mkdir -p "$HOME/.cache/mutt" ; \
+    mkdir -p "$HOME/Mail" ; \
+    mkdir -p "/var/mail/user" ; \
+    chown -R user:user "$HOME"
+
+RUN apk add --no-cache mutt
+
+WORKDIR $HOME
+
+VOLUME "$HOME/.config/mutt"
+VOLUME "$HOME/.local/share/mutt"
+VOLUME "$HOME/.local/state/mutt"
+VOLUME "$HOME/.cache/mutt"
+
+ENV TERM="xterm-256color"
+
+USER user
+
+CMD ["mutt", "--version"]

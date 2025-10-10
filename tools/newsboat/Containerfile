@@ -1,0 +1,31 @@
+# ==== base image ====
+
+FROM alpine:latest
+
+LABEL maintainer="Bruno 'Hyweene' Giarrizzo <bruno@giarrizzo.fr>"
+
+ARG HOME="/home/user"
+ENV HOME="${HOME}"
+
+# create a user
+RUN set -eux ; \
+    adduser -D -h "$HOME" user ; \
+    mkdir -p "$HOME/.newsboat" ; \
+    mkdir -p "$HOME/.config/newsboat" ; \
+    mkdir -p "$HOME/.local/share/newsboat" ; \
+    mkdir -p "$HOME/.local/state/newsboat" ; \
+    mkdir -p "$HOME/.cache/newsboat" ; \
+    chown -R user:user "$HOME"
+
+RUN apk add --no-cache newsboat
+
+WORKDIR $HOME
+
+VOLUME "$HOME/.config/newsboat"
+VOLUME "$HOME/.local/share/newsboat"
+VOLUME "$HOME/.local/state/newsboat"
+VOLUME "$HOME/.cache/newsboat"
+
+USER user
+
+CMD ["newsboat", "--version"]

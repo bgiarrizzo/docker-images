@@ -1,0 +1,31 @@
+# ==== base image ====
+
+FROM alpine:latest
+
+LABEL maintainer="Bruno 'Hyweene' Giarrizzo <bruno@giarrizzo.fr>"
+
+ARG HOME="/home/user"
+ENV HOME="${HOME}"
+
+# create a user
+RUN set -eux ; \
+    adduser -D -h "$HOME" user ; \
+    mkdir -p "$HOME/.nvim" ; \
+    mkdir -p "$HOME/.config/nvim" ; \
+    mkdir -p "$HOME/.local/share/nvim" ; \
+    mkdir -p "$HOME/.local/state/nvim" ; \
+    mkdir -p "$HOME/.cache/nvim" ; \
+    chown -R user:user "$HOME"
+
+RUN apk add --no-cache neovim
+
+WORKDIR $HOME
+
+VOLUME "$HOME/.config/nvim"
+VOLUME "$HOME/.local/share/nvim"
+VOLUME "$HOME/.local/state/nvim"
+VOLUME "$HOME/.cache/nvim"
+
+USER user
+
+CMD ["nvim", "--version"]
